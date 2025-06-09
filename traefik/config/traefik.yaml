@@ -23,6 +23,5 @@ providers:
 certificatesResolvers:
   myresolver:
     acme:
-      email: ${TRAEFIK_ACME_EMAIL}
-      storage: /acme.json
+      storage: /data/acme.json
       tlsChallenge: {}

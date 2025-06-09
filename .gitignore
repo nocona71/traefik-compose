@@ -9,3 +9,6 @@ auth/
 .DS_Store
 *~
 **/.htpasswd
+**/*.log
+
+n8n/data/n8n/n8nEventLog.log

@@ -5,28 +5,28 @@ services:
     container_name: traefik_proxy
     image: traefik:v2.10
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "80:80"
       - "443:443"
     environment:
       - TZ=${TZ:-Europe/Berlin}
+      - TRAEFIK_CERTIFICATESRESOLVERS_MYRESOLVER_ACME_EMAIL=${TRAEFIK_ACME_EMAIL}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
-      - ./data/acme.json:/acme.json
-      - ./data/auth/.htpasswd:/auth/.htpasswd:ro
+      - traefik_data:/data
+      - traefik_auth:/auth
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     command:
-      - "--log.level=${TRAEFIK_LOG_LEVEL:-DEBUG}"
-      - "--providers.docker=true"
-      - "--providers.docker.network=web"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--api.dashboard=true"
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=${TRAEFIK_ACME_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/acme.json"
+      - sh
+      - -c
+      - |
+        apk add --no-cache apache2-utils &&
+        echo "${TRAEFIK_DASHBOARD_USER}:$$(htpasswd -nb ${TRAEFIK_DASHBOARD_USER} ${TRAEFIK_DASHBOARD_PASSWORD_CLEAR} | cut -d: -f2)" > /auth/.htpasswd &&
+        exec traefik
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_DASHBOARD_SUBDOMAIN:-traefik}.${TLD}`)"
@@ -34,9 +34,19 @@ services:
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.tls.certresolver=myresolver"
-      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USER}:${TRAEFIK_DASHBOARD_PASSWORD}"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.usersfile=/auth/.htpasswd"
     networks:
       - web
+
+# Named volumes for data persistence
+volumes:
+  traefik_data:
+    external: true
+    name: traefik_data
+  traefik_auth:
+    external: true
+    name: traefik_auth
 
 networks:
   web:

@@ -1,0 +1,46 @@
+version: "3.8"
+
+# Service definitions
+services:
+  # ==============================================
+  # Portainer - Docker Management UI
+  # ==============================================
+  portainer:
+    # Basic container configuration
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    
+    
+    # Volume mounts for data persistence and Docker socket
+    volumes:
+      - portainer_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    
+    # Environment configuration
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+    
+    # Traefik integration labels
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`${SLD}.${TLD}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.routers.portainer.tls.certresolver=myresolver"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    
+    # Network configuration
+    networks:
+      - web
+
+# Named volumes for data persistence
+volumes:
+  portainer_data:
+    external: true
+    name: portainer_data
+
+networks:
+  web:
+    external: true
+    name: web

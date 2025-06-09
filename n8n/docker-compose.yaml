@@ -10,6 +10,7 @@ services:
     container_name: n8n-db
     restart: unless-stopped
     
+    
     # Environment configuration
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -19,7 +20,7 @@ services:
     
     # Volume mounts for persistent data
     volumes:
-      - ./data/db:/var/lib/postgresql/data
+      - n8n_db_data:/var/lib/postgresql/data
     
     # Network configuration
     networks:
@@ -32,6 +33,7 @@ services:
     image: n8nio/n8n:latest
     container_name: n8n
     restart: unless-stopped
+    
     
     # Environment configuration
     environment:
@@ -70,8 +72,8 @@ services:
     
     # Volume mounts for persistent data
     volumes:
-      - ./data/n8n:/home/node/.n8n
-      - ./data/files:/files
+      - n8n_data:/home/node/.n8n
+      - n8n_files:/files
     
     # Traefik integration labels
     labels:
@@ -86,6 +88,18 @@ services:
     networks:
       - web
       - n8n-internal
+
+# Named volumes for data persistence
+volumes:
+  n8n_data:
+    external: true
+    name: n8n_data
+  n8n_files:
+    external: true
+    name: n8n_files
+  n8n_db_data:
+    external: true
+    name: n8n_db_data
 
 networks:
   web:

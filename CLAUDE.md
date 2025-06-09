@@ -60,9 +60,15 @@ docker-compose up -d
 
 ### Configuration Pattern
 Services follow this pattern:
-1. **Environment files** (`.env`) define domain and service-specific settings
-2. **Docker Compose labels** configure Traefik routing rules
-3. **Config files** in service directories handle application-specific configuration
+1. **Global environment file** (`/.env`) defines shared settings like TLD, TZ, and common credentials
+2. **Service-specific environment files** (`service/.env`) define only service-specific settings like SLD
+3. **Docker Compose labels** configure Traefik routing rules
+4. **Config files** in service directories handle application-specific configuration
+
+#### Environment Variable Inheritance
+- Global variables (TLD, TZ, shared credentials) are defined in the root `.env` file
+- Service-specific variables (SLD, database names, etc.) are in service `.env` files
+- Docker Compose automatically merges both files, with service-specific taking precedence
 
 ### Adding New Services
 When adding a new service:

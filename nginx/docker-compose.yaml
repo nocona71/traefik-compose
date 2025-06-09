@@ -11,6 +11,7 @@ services:
     container_name: nginx
     restart: unless-stopped
     
+    
     # Volume mounts for static content
     volumes:
       - ./html:/usr/share/nginx/html:ro
