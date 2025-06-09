@@ -1,0 +1,10 @@
+# Sensitive files
+.env
+acme.json
+auth/
+*.pem
+*.key
+
+# System files
+.DS_Store
+*~
