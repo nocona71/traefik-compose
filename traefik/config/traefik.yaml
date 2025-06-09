@@ -23,5 +23,6 @@ providers:
 certificatesResolvers:
   myresolver:
     acme:
+      email: devnull@mailfence.com
       storage: /data/acme.json
       tlsChallenge: {}
