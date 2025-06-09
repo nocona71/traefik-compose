@@ -1,0 +1,96 @@
+version: "3.8"
+
+# Service definitions
+services:
+  # ==============================================
+  # PostgreSQL Database - n8n Backend
+  # ==============================================
+  db:
+    image: postgres:15
+    container_name: n8n-db
+    restart: unless-stopped
+    
+    # Environment configuration
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ:-Europe/Berlin}
+    
+    # Volume mounts for persistent data
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    
+    # Network configuration
+    networks:
+      - n8n-internal
+
+  # ==============================================
+  # n8n - Workflow Automation
+  # ==============================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    
+    # Environment configuration
+    environment:
+      # Core n8n Config
+      - N8N_PROTOCOL=https
+      - N8N_HOST=${N8N_SUBDOMAIN:-n8n}.${TLD}
+      - N8N_PORT=5678
+      - N8N_TRUST_PROXY=true
+      
+      # External URLs for webhooks
+      - WEBHOOK_URL=https://${N8N_SUBDOMAIN:-n8n}.${TLD}
+      - VUE_APP_URL_BASE_API=https://${N8N_SUBDOMAIN:-n8n}.${TLD}
+      
+      # Database Config
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      
+      # Timezone and Authentication
+      - GENERIC_TIMEZONE=${TZ:-Europe/Berlin}
+      - TZ=${TZ:-Europe/Berlin}
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-false}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      
+      # Additional settings
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+    
+    # Service dependencies
+    depends_on:
+      - db
+    
+    # Volume mounts for persistent data
+    volumes:
+      - ./data/n8n:/home/node/.n8n
+      - ./data/files:/files
+    
+    # Traefik integration labels
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`${N8N_SUBDOMAIN:-n8n}.${TLD}`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls=true"
+      - "traefik.http.routers.n8n.tls.certresolver=myresolver"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+    
+    # Network configuration
+    networks:
+      - web
+      - n8n-internal
+
+networks:
+  web:
+    external: true
+    name: web
+  n8n-internal:
+    driver: bridge
+      
