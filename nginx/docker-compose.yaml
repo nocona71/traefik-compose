@@ -1,0 +1,39 @@
+version: "3.8"
+
+# Service definitions
+services:
+  # ==============================================
+  # Nginx - Web Server
+  # ==============================================
+  nginx:
+    # Basic container configuration
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    
+    # Volume mounts for static content
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+      - ./config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    
+    # Environment configuration
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+    
+    # Traefik integration labels
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=Host(`www.${TLD}`) || Host(`${TLD}`)"
+      - "traefik.http.routers.nginx.entrypoints=websecure"
+      - "traefik.http.routers.nginx.tls=true"
+      - "traefik.http.routers.nginx.tls.certresolver=myresolver"
+      - "traefik.http.services.nginx.loadbalancer.server.port=80"
+    
+    # Network configuration
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
+    name: web

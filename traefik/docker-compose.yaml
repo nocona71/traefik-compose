@@ -6,25 +6,21 @@ services:
     image: traefik:v2.10
     restart: unless-stopped
     ports:
-      - "80:80"    # HTTP traffic
-      - "443:443"  # HTTPS traffic
+      - "80:80"
+      - "443:443"
     environment:
-      - TLD=${TLD}
-      - TRAEFIK_LOG_LEVEL=${TRAEFIK_LOG_LEVEL:-DEBUG}
-      - TRAEFIK_ACME_EMAIL=${TRAEFIK_ACME_EMAIL}
-      - TRAEFIK_NETWORK=${TRAEFIK_NETWORK:-web}
-      - TZ=${TZ:-Europe/Berlin}    # Add timezone environment variable
+      - TZ=${TZ:-Europe/Berlin}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik.yaml:/etc/traefik/traefik.yaml:ro
-      - ./acme.json:/acme.json
-      - ./auth/.htpasswd:/auth/.htpasswd:ro
-      - /etc/timezone:/etc/timezone:ro    # Add timezone file
-      - /etc/localtime:/etc/localtime:ro  # Add localtime file
+      - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./data/acme.json:/acme.json
+      - ./data/auth/.htpasswd:/auth/.htpasswd:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     command:
       - "--log.level=${TRAEFIK_LOG_LEVEL:-DEBUG}"
       - "--providers.docker=true"
-      - "--providers.docker.network=web"  # Static network name
+      - "--providers.docker.network=web"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--api.dashboard=true"
@@ -39,24 +35,6 @@ services:
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.tls.certresolver=myresolver"
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USER}:${TRAEFIK_DASHBOARD_PASSWORD}"
-    networks:
-      - web
-
-  nginx:
-    image: nginx:alpine
-    container_name: nginx
-    restart: unless-stopped
-    volumes:
-      - ./html:/usr/share/nginx/html:ro
-    environment:
-      - TZ=${TZ:-Europe/Berlin}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.nginx.rule=Host(`www.${TLD}`) || Host(`${TLD}`)"
-      - "traefik.http.routers.nginx.entrypoints=websecure"
-      - "traefik.http.routers.nginx.tls=true"
-      - "traefik.http.routers.nginx.tls.certresolver=myresolver"
-      - "traefik.http.services.nginx.loadbalancer.server.port=80"
     networks:
       - web
 

@@ -1,47 +1,60 @@
 #!/bin/bash
 set -e
 
-# Colors for output
+# Color definitions
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}Setting up Traefik configuration...${NC}"
+echo -e "${GREEN}Setting up Traefik Compose project...${NC}"
+
+# Create directory structure
+echo -e "${YELLOW}Creating directory structure...${NC}"
+mkdir -p traefik/{config,data/auth} nginx/{config,html}
 
 # Create network if it doesn't exist
-NETWORK_NAME=${TRAEFIK_NETWORK:-web}
-if ! docker network ls | grep -q $NETWORK_NAME; then
-    echo -e "${YELLOW}Creating Docker network: $NETWORK_NAME${NC}"
-    docker network create $NETWORK_NAME
-fi
+echo -e "${YELLOW}Creating Docker network...${NC}"
+docker network create web || true
 
-# Create .env if it doesn't exist
-if [ ! -f .env ]; then
-    echo -e "${YELLOW}Creating .env file from template...${NC}"
-    cp .env.example .env
-    echo "Please edit .env with your settings"
-fi
+# Copy example env files
+echo -e "${YELLOW}Setting up environment files...${NC}"
+cp -n nginx/.env.example nginx/.env || true
+cp -n traefik/.env.example traefik/.env || true
 
-# Initialize acme.json
-if [ ! -f acme.json ]; then
-    echo -e "${YELLOW}Creating acme.json...${NC}"
-    touch acme.json
-    chmod 600 acme.json
-fi
+# Create empty acme.json with correct permissions
+echo -e "${YELLOW}Setting up SSL certificate storage...${NC}"
+touch traefik/data/acme.json
+chmod 600 traefik/data/acme.json
 
-# Create auth directory and generate htpasswd file
-mkdir -p auth
-if [ ! -f auth/.htpasswd ]; then
-    echo -e "${YELLOW}Generating authentication credentials...${NC}"
-    read -p "Enter username for dashboard access [admin]: " USERNAME
-    USERNAME=${USERNAME:-admin}
-    read -s -p "Enter password for dashboard access: " PASSWORD
-    echo
-    htpasswd -bc auth/.htpasswd $USERNAME $PASSWORD
-    chmod 600 auth/.htpasswd
-fi
+# Generate htpasswd file for Traefik dashboard
+echo -e "${YELLOW}Setting up authentication...${NC}"
+read -p "Enter Traefik dashboard username [admin]: " DASHBOARD_USER
+DASHBOARD_USER=${DASHBOARD_USER:-admin}
+read -s -p "Enter Traefik dashboard password: " DASHBOARD_PASSWORD
+echo
+htpasswd -bc traefik/data/auth/.htpasswd "$DASHBOARD_USER" "$DASHBOARD_PASSWORD"
 
-echo -e "${GREEN}Setup complete!${NC}"
-echo -e "Next steps:"
-echo -e "1. Edit .env file with your settings"
-echo -e "2. Run: docker-compose up -d"
+# Create basic index.html
+echo -e "${YELLOW}Creating default web page...${NC}"
+cat > nginx/html/index.html <<EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+</head>
+<body>
+    <h1>Welcome to Traefik Compose</h1>
+    <p>If you see this page, the Nginx web server is successfully installed.</p>
+</body>
+</html>
+EOF
+
+echo -e "${GREEN}Setup complete! Next steps:${NC}"
+echo "1. Edit the .env files in nginx/ and traefik/ directories"
+echo "2. Start Traefik: cd traefik && docker-compose up -d"
+echo "3. Start Nginx: cd ../nginx && docker-compose up -d"
+
+# Make the script executable
+chmod +x setup.sh

@@ -1,5 +1,5 @@
 # Sensitive files
-.env
+**/.env
 acme.json
 auth/
 *.pem
@@ -8,3 +8,4 @@ auth/
 # System files
 .DS_Store
 *~
+**/.htpasswd
